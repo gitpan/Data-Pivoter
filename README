@@ -1,0 +1,7 @@
+Table::Pivoter version 0.04
+
+Object oriented pivot / crosstabulation. Do a perldoc Pivoter.pm to get 
+information on usage. No automatic tests yest. Use run pivotdriver on the 
+datafiles (table[123].dat) and check that the output is reasonable.
+
+Morten Sickel, Drøbak 300402
