@@ -2,7 +2,6 @@
 
 use Data::Pivoter;
 use strict;
-use utils;
 
 
 sub comparray{
@@ -13,8 +12,10 @@ sub comparray{
       print "[$line],[$row]: $arry1->[$line][$row] | $arry2->[$line][$row]\n"
 	if $ENV{TEST_DEBUG};
       $ok = 0 unless ($#{$arry1->[$line]} == $#{$arry2->[$line]});
+      $^W=0;
       $ok = 0 if ($arry1->[$line][$row] ne  $arry2->[$line][$row]);
       $ok = 0 if ($arry1->[$line][$row] !=  $arry2->[$line][$row]);
+      $^W=1;
       return $ok unless $ok;
     }
   }
@@ -29,9 +30,8 @@ sub main {
   open (INFILE,"<t/table1.dat");
 
   while(<INFILE>){
-    next if /^\s*\i$/;
     chomp;
-    @lines[$i++]=[split];
+    $lines[$i++]=[split];
   }  
   
   my $pivoter=Data::Pivoter->new(col=> 0, row=> 1, data=> 2);

@@ -2,7 +2,7 @@
 
 use Data::Pivoter;
 use strict;
-use utils;
+
 
 sub comparray{
   my($arry1,$arry2) = @_;
@@ -12,6 +12,7 @@ sub comparray{
       print "[$line],[$row]: $arry1->[$line][$row] | $arry2->[$line][$row]\n"
 	if $ENV{TEST_DEBUG};
       $ok = 0 unless ($#{$arry1->[$line]} == $#{$arry2->[$line]});
+      local $^W=0;
       $ok = 0 if ($arry1->[$line][$row] ne  $arry2->[$line][$row]);
       $ok = 0 if ($arry1->[$line][$row] !=  $arry2->[$line][$row]);
     }
@@ -30,17 +31,17 @@ sub main {
   open (INFILE,"<t/table1.dat");
 
   while(<INFILE>){
-    next if /^\s*\i$/;
+  #  next if /^\s*\i$/;
     chomp;
-    @lines[$i++]=[split];
+    $lines[$i++]=[split];
   }  
   
   my $pivoter=Data::Pivoter->new(col=> 0, row=> 1, data=> 2);
   my @pivtable = @{$pivoter->pivot(\@lines)};
   
   my (@pivcheck);
-  @pivcheck=([undef,'mar','feb','jan'],
-	     [2000,3,2,1],
+  @pivcheck=([undef,'feb','jan','mar'],
+	     [2000,2,1,0],
 	     [2001,6,5,4]);
   
   if (comparray(\@pivtable,\@pivcheck)){

@@ -35,7 +35,7 @@ use vars '$AUTOLOAD';
 use Data::Dumper;
 use Carp;
 
-my $debug = $ENV{PIVOTER_DEBUG};
+my $debug = $ENV{PIVOTER_DEBUG} || 0;
 
 =head1 Methods
 
@@ -85,7 +85,7 @@ Data= $self->{_data}\n") unless $validated;
 sub _keysort{
   my $href = shift;
   my ($key,$i);
-  foreach $key (sort {$a <=> $b} keys %$href){
+  foreach $key (sort keys %$href){
     $href->{$key}=++$i;
   }
 }
@@ -130,7 +130,7 @@ sub pivot{
   $table = shift; @table = @$table;
   print "Pivot[R,C]: $self->{_rowhead},$self->{_colhead}\n" if $debug > 3;
   for ($rows = 0;$rows < @table;$rows++){
-    print "[\$rows: $rows]Pivot[R,C]: $self->{_rowhead},$self->{_colhead}\n" 
+      print "[\$rows: $rows]Pivot[R,C]: $self->{_rowhead},$self->{_colhead}\n" 
       if $debug > 3;
     print "row :>$table[$rows][$self->{_rowhead}]<\n" if $debug > 3;
     print "col :>$table[$rows][$self->{_colhead}]<\n" if $debug > 3;
@@ -173,14 +173,14 @@ sub pivot{
   print "Ckeys sorted:\n",Dumper(\%ckeys) if $debug > 5;
 
   $c=1; # Puts in the row headers in the pivottable:
-  foreach my $colkey (sort {$a<=>$b} keys %ckeys){
+  foreach my $colkey (sort keys %ckeys){
     $pivot[0][$c++] = $colkey;
   }
   # The row and col headers are in the first column and row
-  foreach  my $rowkey (sort {$a <=> $b} keys %rkeys){
+  foreach  my $rowkey (sort keys %rkeys){
     # Puts in the col headers:
     $pivot[$rkeys{$rowkey}][0] = $rowkey;  
-    foreach  my $colkey (sort {$a <=> $b} keys %ckeys){
+    foreach  my $colkey (sort keys %ckeys){
       # Puts in the values in the finished table:
       $pivot[$rkeys{$rowkey}][$ckeys{$colkey}] = $hashtable{$rowkey}{$colkey};
     }
@@ -188,12 +188,15 @@ sub pivot{
   print '@pivot : ',Dumper(\@pivot) if $debug > 5;
   if ($self->{_function}){
     for ($r=1,@pivot,$r++){
-      my $row=@pivot[$r];
+      my $warn = $^W;
+      $^W=undef;
+      my $row=$pivot[$r];
       for ($c=1,@{$row},$c++){
 	print "[$r,$c] @{$pivot[$r][$c]}" if $debug > 2;
 	# eval{$pivot[$r][$c]= eval{$self->{_function}(@{$pivot[$r][$c]})}};
 	eval{${$pivot[$r][$c]}=$self->{_function}};
-      }
+    }
+    $^W=$warn;
     }
     print "\n" if $debug >2;
   }

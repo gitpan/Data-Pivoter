@@ -1,3 +1,5 @@
 0.06 Corrected a bug so that the module works with tables with missing data
 
 0.07 ** Interface change ** sends arrayrefs rather than arrays back and forth
+
+0.07a Cleanded up the tests, removed a unneccesary dependency

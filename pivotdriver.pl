@@ -35,32 +35,32 @@ print"\nOK\n";
 #print Dumper(\@lines);
 print "This should work:\n";
 my $pivoter=Data::Pivoter->new(col=> 0, row=> 1, data=> 2);
-printout( $pivoter->pivot(@lines)); 
+printout( @{ $pivoter->pivot(\@lines)}); 
 print "\n";
 
 print "This should give a 'Definition Error:\n";
 $pivoter=Data::Pivoter->new(col=> 0, row=> 1,);
-printout( $pivoter->pivot(@lines)); 
+printout(@{ $pivoter->pivot(\@lines)}); 
 print "\n";
 
 print "This should give a 'Definition Error:\n";
 $pivoter=Data::Pivoter->new();
-printout($pivoter->pivot(@lines));
+printout(@{$pivoter->pivot(\@lines)});
 print"\n";
 
 print "This should give a 'Definition Error:\n";
 $pivoter=Data::Pivoter->new(col=> 1, row=> 1, data=> 2);
-printout( $pivoter->pivot(@lines)); 
+printout( @{$pivoter->pivot(\@lines)}); 
 print"\n";
 
 print "This should not give any errors, but a strange output (Diagonal matrix):\n";
 $pivoter=Data::Pivoter->new(col=> 1, row=> 1, data=> 2, donotvalidate=>1);
-printout( $pivoter->pivot(@lines)); 
+printout( @{$pivoter->pivot(\@lines)}); 
 print"\n";
 
 print "This should work:\n";
 $pivoter=Data::Pivoter->new('col', 2, 'row', 1,'group',0, 'data', 2);
-printout( $pivoter->pivot(@lines)); 
+printout( @{$pivoter->pivot(\@lines)}); 
 print "\n";
 
 # print "This should work in a later version:\n";
