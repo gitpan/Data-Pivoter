@@ -2,24 +2,25 @@ package Data::Pivoter;
 
 use strict;
 use vars qw($VERSION);    
-$VERSION='0.07';
+$VERSION='0.08';
 
 =head1 NAME
 
 Data::Pivoter - Perl extension for pivot / cross tabulation of data
 
-=cut
-
 
 =head1 SYNOPSIS
 
-$pivoter = Table::Pivoter->new(col=> <col>, row=> <row>, data=> <data>, 
-                               group=> <group>, function=> <function>, 
-                               donotvalidate=> <boolean>); 
+$pivoter = Table::Pivoter->new(col=> <col>, row=> <row>,
+                               data=> <data>,
+                               group=> <group>,
+                               function=> <function>, 
+                               numeric => <boolean>,
+                               donotvalidate=> <boolean>, 
+                               test=><boolean>); 
 
-$pivotedtableref = $pivoter->pivot(\@rawtable);
-
-=cut
+$pivotedtableref = $pivoter->pivot(\@rawtable) 
+    if $pivoter->ok;
 
  
 =head1 DESCRIPTION
@@ -42,18 +43,29 @@ my $debug = $ENV{PIVOTER_DEBUG} || 0;
 =head2 new
 
 
-Table::Pivoter->new(col=> <col>, row=> <row>, data=> <data>, 
-group=> <group>, function=> <function>, numeric=> donotvalidate=> <boolean>); 
+Table::Pivoter->new(col=><col>, row=><row>, data=><data>, 
+group=><group>, function=><function>, numeric=><boolean>,
+donotvalidate=><boolean>,
+test=>boolean); 
 
 Creates a new pivoter object where <col> is the column containing data going
 to be the column headings, <row> is the column going to row headings and 
 <data> is the data column. <group> is a column used for higher level grouping,
-i.e. splitting the data into different tables and {function} is a function to 
+i.e. splitting the data into different tables. 
+
+{numerical} is used to flag that the data are numerical so that the correct 
+sorting function is being used.
+ {function} is a function to 
 compile the data set for each row/col combination (Still not implemented)  If 
-no function is given, the last value for each data point is returned. The
+no function is given, the last value for each data point is returned. 
+
+The
 inputdata to new are validated to check that row,col, and data are defined and
 that row and col differs. If this behaviour for some reason not is wanted,
-donotvalidate can be set to a true value
+donotvalidate can be set to a true value. The property test may be set to avoid
+output from the validation (esp for the internal testing). To check for a well-
+defined pivoter object, call the method ok. 
+
 
 Planned features (except for implementing the compilation function) includes to
 add customizable sorting functions for rows and columns.
@@ -63,7 +75,7 @@ add customizable sorting functions for rows and columns.
 
 
 sub _validate{
-  # Checks if a pivoter object is welldefined
+  # Checks if a pivoter object is well-defined
   my $self=shift;
   # col, row and data must be defined
   my $validated = 
@@ -73,20 +85,26 @@ sub _validate{
   # If all are defined, must check that row and column are different rows
   $validated = not($self->{_colhead} == $self->{_rowhead}) 
     if $validated;
+    local $^W=0;
   carp ("Definition error:
 Col = $self->{_colhead}
 Row = $self->{_rowhead}
-Data= $self->{_data}\n") unless $validated;  
+Data= $self->{_data}\n") unless $validated || $self->{_testing};  
   return $validated;
 
 }
 
 
+
 sub _keysort{
+  my $self = shift;
   my $href = shift;
-  my ($key,$i);
-  foreach $key (sort keys %$href){
-    $href->{$key}=++$i;
+  my $i = shift;
+  my $sortfunc=$i eq 'C'?$self->{_sortfunccol}:$self->{_sortfuncrow};
+  $i=0;
+  foreach my $key (sort {&$sortfunc}  keys %$href){
+   $href->{$key}=++$i if defined $key;
+   print "Key: $key [$i]\n" if $debug > 2;
   }
 }
 
@@ -104,18 +122,33 @@ sub new{
 	      _function=> $para{function},
 	      _group   => $para{group},
 	      _donotvalidate =>$para{donotvalidate},
-	      _numeric => $para{numeric}
+	      _numeric => $para{numeric},
+	      _testing => $para{test} 
 	     };
   print Dumper(\$self) if $debug>9;
   print "New[R,C]  : $self->{_rowhead},$self->{_colhead}\n" if $debug >3;
+  carp("Sorry, functions are still not working in Data::Pivoter...\n") 
+    if $self->{_function};
+  { 
+    local $^W=0; # Turns of warnings to avoid lots of 
+    # "Use of uninitialized value in pattern match"
+    if ($self->{_numeric}=~/C/i){
+      $self->{_sortfunccol}= sub {$a <=> $b} }
+    else{
+      $self->{_sortfunccol}= sub {$a cmp $b} };
+    if ($self->{_numeric}=~/R/i){
+      $self->{_sortfuncrow}= sub {$a <=> $b} }
+    else{
+      $self->{_sortfuncrow}= sub {$a cmp $b} };
+  }
   bless $self,$class;
-  $self->_validate unless $self->{_donotvalidate};
+  $self->{_OK}=$self->{_donotvalidate} || $self->_validate ; 
   return $self;
 }
 
 =head2 pivot
 
-@pivotedtable = pivot (@rawtable);
+@pivotedtable = $pivoter->pivot (@rawtable);
 
 The pivoter method actually performs the pivot with the parameters given in new
 and returns the pivoted table. 
@@ -123,11 +156,10 @@ and returns the pivoted table.
 =cut
 
 
-
 sub pivot{
   my $self = shift;
   my($table,$rows,$r,$c,$g,%rkeys,%ckeys,%gkeys,%hashtable,@pivot, @table);
-  $table = shift; @table = @$table;
+  @table = @{ shift() }; # Throws in a ref, needs the table 
   print "Pivot[R,C]: $self->{_rowhead},$self->{_colhead}\n" if $debug > 3;
   for ($rows = 0;$rows < @table;$rows++){
       print "[\$rows: $rows]Pivot[R,C]: $self->{_rowhead},$self->{_colhead}\n" 
@@ -137,50 +169,44 @@ sub pivot{
     my $row = $table[$rows][$self->{_rowhead}];
     my $col = $table[$rows][$self->{_colhead}];
     my $group;
-    # Collects and counts the row, col and group values
+    # Collects the unique row, col and group values
     $rkeys{$row}=++$r unless $rkeys{$row};
     $ckeys{$col}=++$c unless $ckeys{$col};
     if ($self->{_group}){  
       $group = $table[$rows][$self->{_group}];
       $gkeys{$group}=++$g unless $gkeys{$group};
     }
-    my $ref;
+    my $ref; # Referres to the element in the pivot hash
     if (defined $group){
       $ref=\$hashtable{$row}{$col}{$group} 
     }else{
       $ref=\$hashtable{$row}{$col}
     }
-
     unless ($self->{_function}){
       # No function is defined, just picks up the value      
       $$ref=$table[$rows][$self->{_data}];
     }else{ 
-      carp("Sorry, functions are still not working in Data::Pivoter...\n");
       push  @$ref, \$table[$rows][$self->{_data}];
       # Treats the $ref as an array reference and 
       # collects the data into that array to use the given function on them
       # after all the data have been collected.
     }
   }
-
-
+  # Preparing the correct sorting of the data
+  $self->_keysort(\%rkeys,'R');
+  $self->_keysort(\%ckeys,'C');
   
-  print "Rkeys presorted:\n",Dumper(\%rkeys) if $debug > 6;
-  print "Ckeys presorted:\n",Dumper(\%ckeys) if $debug > 6;
-  _keysort (\%rkeys);
-  _keysort (\%ckeys);
-  print "Rkeys sorted:\n",Dumper(\%rkeys) if $debug > 5;
-  print "Ckeys sorted:\n",Dumper(\%ckeys) if $debug > 5;
-
+  # [0][0] is always undef
   $c=1; # Puts in the row headers in the pivottable:
-  foreach my $colkey (sort keys %ckeys){
+  foreach my $colkey (sort  {&{$self->{_sortfunccol}}} keys %ckeys){
     $pivot[0][$c++] = $colkey;
   }
   # The row and col headers are in the first column and row
-  foreach  my $rowkey (sort keys %rkeys){
+  foreach  my $rowkey (sort  {&{$self->{_sortfuncrow}}} keys %rkeys){
     # Puts in the col headers:
     $pivot[$rkeys{$rowkey}][0] = $rowkey;  
-    foreach  my $colkey (sort keys %ckeys){
+    foreach my $colkey (sort  {&{$self->{_sortfunccol}}} keys %ckeys){
+    # foreach  my $colkey (sort  {&{$self->{_sortfunccol}}} keys %ckeys){
       # Puts in the values in the finished table:
       $pivot[$rkeys{$rowkey}][$ckeys{$colkey}] = $hashtable{$rowkey}{$colkey};
     }
@@ -204,6 +230,17 @@ sub pivot{
 return \@pivot;
 }
 
+
+=head2 ok
+
+The method may be called to see if the pivoter object is well-defined. If donotvalidate is set, then this method will always return true.
+
+=cut 
+
+sub ok{
+  my $self=shift;
+  return $self->{_OK}
+}
 
 =head3 New algorithms
 

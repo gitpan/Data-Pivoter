@@ -7,15 +7,16 @@ use strict;
 sub comparray{
   my($arry1,$arry2) = @_;
   my $ok = 'TRUE' if $#{$arry1} == $#{$arry2};	
-  for (my ($line)=0;$line < $#{$arry1}; ++$line){
-    for (my ($row)=0;$row < $#{$arry1->[$line]};++$row){
+  for (my ($line)=0;$line <= $#{$arry1}; ++$line){
+    for (my ($row)=0;$row <= $#{$arry1->[$line]};++$row){
       print "[$line],[$row]: $arry1->[$line][$row] | $arry2->[$line][$row]\n"
 	if $ENV{TEST_DEBUG};
       $ok = 0 unless ($#{$arry1->[$line]} == $#{$arry2->[$line]});
-      $^W=0;
+      #my $warn=$^W;
+      local $^W=0;
       $ok = 0 if ($arry1->[$line][$row] ne  $arry2->[$line][$row]);
       $ok = 0 if ($arry1->[$line][$row] !=  $arry2->[$line][$row]);
-      $^W=1;
+      #$^W=$warn;
       return $ok unless $ok;
     }
   }

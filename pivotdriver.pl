@@ -38,6 +38,11 @@ my $pivoter=Data::Pivoter->new(col=> 0, row=> 1, data=> 2);
 printout( @{ $pivoter->pivot(\@lines)}); 
 print "\n";
 
+print "This should work with correctly sorted numbers:\n";
+my $pivoter=Data::Pivoter->new(col=> 0, row=> 1, data=> 2, numeric=>'C');
+printout( @{ $pivoter->pivot(\@lines)}); 
+print "\n";
+
 print "This should give a 'Definition Error:\n";
 $pivoter=Data::Pivoter->new(col=> 0, row=> 1,);
 printout(@{ $pivoter->pivot(\@lines)}); 
