@@ -1,21 +1,31 @@
-package Table::Pivoter;
+package Data::Pivoter;
 
 use strict;
 use vars qw($VERSION);    
-$VERSION='0.04';
+$VERSION='0.07';
 
 =head1 NAME
 
 Data::Pivoter - Perl extension for pivot / cross tabulation of data
 
+=cut
+
+
 =head1 SYNOPSIS
+
+$pivoter = Table::Pivoter->new(col=> <col>, row=> <row>, data=> <data>, 
+                               group=> <group>, function=> <function>, 
+                               donotvalidate=> <boolean>); 
+
+$pivotedtableref = $pivoter->pivot(\@rawtable);
+
+=cut
+
+ 
+=head1 DESCRIPTION
 
 A pivot object is created using new. Various parameters may be specified to 
 alter how the table is pivoted. The actual pivot of a table is perfomed using the method pivot.
-
-=cut
- 
-=head1 DESCRIPTION
 
 =cut
 
@@ -25,7 +35,7 @@ use vars '$AUTOLOAD';
 use Data::Dumper;
 use Carp;
 
-my $debug = $ENV{PIVOT_DEBUG};
+my $debug = $ENV{PIVOTER_DEBUG};
 
 =head1 Methods
 
@@ -33,7 +43,7 @@ my $debug = $ENV{PIVOT_DEBUG};
 
 
 Table::Pivoter->new(col=> <col>, row=> <row>, data=> <data>, 
-group=> <group>, function=> <function>, donotvalidate=> <boolean>); 
+group=> <group>, function=> <function>, numeric=> donotvalidate=> <boolean>); 
 
 Creates a new pivoter object where <col> is the column containing data going
 to be the column headings, <row> is the column going to row headings and 
@@ -49,6 +59,8 @@ Planned features (except for implementing the compilation function) includes to
 add customizable sorting functions for rows and columns.
 
 =cut
+
+
 
 sub _validate{
   # Checks if a pivoter object is welldefined
@@ -66,6 +78,16 @@ Col = $self->{_colhead}
 Row = $self->{_rowhead}
 Data= $self->{_data}\n") unless $validated;  
   return $validated;
+
+}
+
+
+sub _keysort{
+  my $href = shift;
+  my ($key,$i);
+  foreach $key (sort {$a <=> $b} keys %$href){
+    $href->{$key}=++$i;
+  }
 }
 
 
@@ -81,7 +103,8 @@ sub new{
 	      _data    => $para{data},
 	      _function=> $para{function},
 	      _group   => $para{group},
-	      _donotvalidate =>$para{donotvalidate}
+	      _donotvalidate =>$para{donotvalidate},
+	      _numeric => $para{numeric}
 	     };
   print Dumper(\$self) if $debug>9;
   print "New[R,C]  : $self->{_rowhead},$self->{_colhead}\n" if $debug >3;
@@ -99,25 +122,27 @@ and returns the pivoted table.
 
 =cut
 
+
+
 sub pivot{
   my $self = shift;
-  my($r,$c,%rkeys,%ckeys,%gkeys,%hashtable,@pivot, @table);
-  @table = @_;
+  my($table,$rows,$r,$c,$g,%rkeys,%ckeys,%gkeys,%hashtable,@pivot, @table);
+  $table = shift; @table = @$table;
   print "Pivot[R,C]: $self->{_rowhead},$self->{_colhead}\n" if $debug > 3;
-  for ($r = 0;$r < @table;$r++){
-    print "[\$r: $r]Pivot[R,C]: $self->{_rowhead},$self->{_colhead}\n" 
+  for ($rows = 0;$rows < @table;$rows++){
+    print "[\$rows: $rows]Pivot[R,C]: $self->{_rowhead},$self->{_colhead}\n" 
       if $debug > 3;
-    print "row :>$table[$r][$self->{_rowhead}]<\n" if $debug > 3;
-    print "col :>$table[$r][$self->{_colhead}]<\n" if $debug > 3;
-    my $row = $table[$r][$self->{_rowhead}];
-    my $col = $table[$r][$self->{_colhead}];
+    print "row :>$table[$rows][$self->{_rowhead}]<\n" if $debug > 3;
+    print "col :>$table[$rows][$self->{_colhead}]<\n" if $debug > 3;
+    my $row = $table[$rows][$self->{_rowhead}];
+    my $col = $table[$rows][$self->{_colhead}];
     my $group;
     # Collects and counts the row, col and group values
-    $rkeys{$row}++;
-    $ckeys{$col}++;
-    if ($self->{_group}){   
-      $group = $table[$r][$self->{_group}];
-      $gkeys{$group}++;
+    $rkeys{$row}=++$r unless $rkeys{$row};
+    $ckeys{$col}=++$c unless $ckeys{$col};
+    if ($self->{_group}){  
+      $group = $table[$rows][$self->{_group}];
+      $gkeys{$group}=++$g unless $gkeys{$group};
     }
     my $ref;
     if (defined $group){
@@ -128,44 +153,39 @@ sub pivot{
 
     unless ($self->{_function}){
       # No function is defined, just picks up the value      
-      $$ref=$table[$r][$self->{_data}];
+      $$ref=$table[$rows][$self->{_data}];
     }else{ 
-      carp("Sorry, functions are still not working...\n");
-      push  @$ref, \$table[$r][$self->{_data}];
+      carp("Sorry, functions are still not working in Data::Pivoter...\n");
+      push  @$ref, \$table[$rows][$self->{_data}];
       # Treats the $ref as an array reference and 
       # collects the data into that array to use the given function on them
       # after all the data have been collected.
     }
   }
 
-=head3 New algorithms
 
-A possible enhancement is to use two different types of functions for
-compilation, one which needs all the data avaliable to perform the calculation,
-another that can can be applied to the data before all the datapoints are 
-known, (e.g. to return the max value from the data set) to avoid goint through 
-the data set twice when possible
-
-=cut
   
-  print "Rkeys:\n",Dumper(\%rkeys) if $debug > 4;
-  print "Ckeys:\n",Dumper(\%ckeys) if $debug > 4;
+  print "Rkeys presorted:\n",Dumper(\%rkeys) if $debug > 6;
+  print "Ckeys presorted:\n",Dumper(\%ckeys) if $debug > 6;
+  _keysort (\%rkeys);
+  _keysort (\%ckeys);
+  print "Rkeys sorted:\n",Dumper(\%rkeys) if $debug > 5;
+  print "Ckeys sorted:\n",Dumper(\%ckeys) if $debug > 5;
+
   $c=1; # Puts in the row headers in the pivottable:
-  foreach my $colkey (sort keys %ckeys){
+  foreach my $colkey (sort {$a<=>$b} keys %ckeys){
     $pivot[0][$c++] = $colkey;
   }
-  $r=$c=1; # The row and col headers are in the first column and row
-  foreach  my $rowkey (sort keys %rkeys){
+  # The row and col headers are in the first column and row
+  foreach  my $rowkey (sort {$a <=> $b} keys %rkeys){
     # Puts in the col headers:
-    $pivot[$r][0] = $rowkey;  
-    $c = 1;
-    foreach  my $colkey (sort keys %ckeys){
+    $pivot[$rkeys{$rowkey}][0] = $rowkey;  
+    foreach  my $colkey (sort {$a <=> $b} keys %ckeys){
       # Puts in the values in the finished table:
-      $pivot[$r][$c++] = $hashtable{$rowkey}{$colkey};
+      $pivot[$rkeys{$rowkey}][$ckeys{$colkey}] = $hashtable{$rowkey}{$colkey};
     }
-    $r++;
   }
-  print Dumper(\@pivot) if $debug > 5;
+  print '@pivot : ',Dumper(\@pivot) if $debug > 5;
   if ($self->{_function}){
     for ($r=1,@pivot,$r++){
       my $row=@pivot[$r];
@@ -178,12 +198,23 @@ the data set twice when possible
     print "\n" if $debug >2;
   }
 
-return @pivot;
+return \@pivot;
 }
+
+
+=head3 New algorithms
+
+A possible enhancement is to use two different types of functions for
+compilation, one which needs all the data avaliable to perform the calculation,
+another that can can be applied to the data before all the datapoints are 
+known, (e.g. to return the max value from the data set) to avoid going through 
+the data set twice when possible
+
+=cut
 
 =head1 System variables
 
-The variable PIVOT_DEBUG may be set to get debugging output. A higher numerical
+The variable PIVOTER_DEBUG may be set to get debugging output. A higher numerical
 value gives more output.
 
 =cut

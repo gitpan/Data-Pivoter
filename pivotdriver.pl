@@ -2,7 +2,7 @@
 
 use strict;
 
-use Table::Pivot;
+use Data::Pivoter;
 use Data::Dumper;
 use lib "~/perl";
 
@@ -34,32 +34,32 @@ while(<>){
 print"\nOK\n";
 #print Dumper(\@lines);
 print "This should work:\n";
-my $pivoter=Table::Pivot->new(col=> 0, row=> 1, data=> 2);
+my $pivoter=Data::Pivoter->new(col=> 0, row=> 1, data=> 2);
 printout( $pivoter->pivot(@lines)); 
 print "\n";
 
 print "This should give a 'Definition Error:\n";
-$pivoter=Table::Pivot->new(col=> 0, row=> 1,);
+$pivoter=Data::Pivoter->new(col=> 0, row=> 1,);
 printout( $pivoter->pivot(@lines)); 
 print "\n";
 
 print "This should give a 'Definition Error:\n";
-$pivoter=Table::Pivot->new();
+$pivoter=Data::Pivoter->new();
 printout($pivoter->pivot(@lines));
 print"\n";
 
 print "This should give a 'Definition Error:\n";
-$pivoter=Table::Pivot->new(col=> 1, row=> 1, data=> 2);
+$pivoter=Data::Pivoter->new(col=> 1, row=> 1, data=> 2);
 printout( $pivoter->pivot(@lines)); 
 print"\n";
 
 print "This should not give any errors, but a strange output (Diagonal matrix):\n";
-$pivoter=Table::Pivot->new(col=> 1, row=> 1, data=> 2, donotvalidate=>1);
+$pivoter=Data::Pivoter->new(col=> 1, row=> 1, data=> 2, donotvalidate=>1);
 printout( $pivoter->pivot(@lines)); 
 print"\n";
 
 print "This should work:\n";
-$pivoter=Table::Pivot->new('col', 2, 'row', 1,'group',0, 'data', 2);
+$pivoter=Data::Pivoter->new('col', 2, 'row', 1,'group',0, 'data', 2);
 printout( $pivoter->pivot(@lines)); 
 print "\n";
 

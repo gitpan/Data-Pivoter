@@ -1,7 +1,19 @@
-Table::Pivoter version 0.04
+Table::Pivoter version 0.07
 
-Object oriented pivot / crosstabulation. Do a perldoc Pivoter.pm to get 
-information on usage. No automatic tests yest. Use run pivotdriver on the 
-datafiles (table[123].dat) and check that the output is reasonable.
 
-Morten Sickel, Drøbak 300402
+Object oriented pivot / crosstabulation. 
+
+Installation:
+
+perl Makefile.PL
+make
+make test
+su -c 'make install'
+
+on some platforms (e.g. HP-UX), do a su -c root 'make install' to install.
+
+Do a perldoc Pivoter.pm to get information on usage. Pivotdriver.pm is provided
+as an example for usage, it can read the tables used for testing 
+(t/table[123].dat)
+
+Morten Sickel, Drøbak 150802
