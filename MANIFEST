@@ -3,3 +3,8 @@ Makefile.PL
 MANIFEST
 Pivoter.pm
 test.pl
+pivotdriver.pl
+table1.dat
+table2.dat
+table3.dat
+README

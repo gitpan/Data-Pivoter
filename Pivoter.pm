@@ -17,7 +17,7 @@ alter how the table is pivoted. The actual pivot of a table is perfomed using th
  
 =head1 DESCRIPTION
 
-
+=cut
 
 
 use vars '$AUTOLOAD';
